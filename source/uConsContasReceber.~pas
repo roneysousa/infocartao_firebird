@@ -1,0 +1,538 @@
+unit uConsContasReceber;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, ExtCtrls, Grids, DBGrids, RxLookup, Mask, ToolEdit,
+  Buttons, DB, DBTables, FMTBcd, SqlExpr, DBClient, Provider;
+
+type
+  TfrmConsContasReceber = class(TForm)
+    Panel3: TPanel;
+    lbl_Titulo: TLabel;
+    Panel1: TPanel;
+    Panel2: TPanel;
+    Panel4: TPanel;
+    Panel5: TPanel;
+    Panel6: TPanel;
+    GridContas: TDBGrid;
+    ckb_Todas: TCheckBox;
+    lbl_mens1: TLabel;
+    cmbCliente: TRxDBLookupCombo;
+    ckb_Datas: TCheckBox;
+    edt_DTINIC: TDateEdit;
+    edt_DTFINA: TDateEdit;
+    lbl_e: TLabel;
+    btFechar: TBitBtn;
+    dsCliente: TDataSource;
+    btExecutar: TBitBtn;
+    dsBoletos: TDataSource;
+    Panel7: TPanel;
+    rgbOpcao: TRadioGroup;
+    dstConsultaBoletos: TSQLDataSet;
+    qryBoletos: TSQLQuery;
+    qryBoletosBOL_NRDOCU: TStringField;
+    qryBoletosBOL_NRFATU: TStringField;
+    qryBoletosBOL_NRCART: TStringField;
+    qryBoletosBOL_DTVENC: TDateField;
+    qryBoletosBOL_DTDOCU: TDateField;
+    qryBoletosBOL_VLDOCU: TFloatField;
+    qryBoletosBOL_NMSACA: TStringField;
+    qryBoletosBOL_FLSITU: TStringField;
+    qryBoletosBOL_VLJURO: TFloatField;
+    qryBoletosBOL_DTPAGA: TDateField;
+    qryBoletosBOL_DIASAT2: TIntegerField;
+    dspConsulta: TDataSetProvider;
+    cdsConsulta: TClientDataSet;
+    dstConsultaBoletosBOL_NRDOCU: TStringField;
+    dstConsultaBoletosBOL_NRFATU: TStringField;
+    dstConsultaBoletosBOL_NRCART: TStringField;
+    dstConsultaBoletosBOL_DTVENC: TDateField;
+    dstConsultaBoletosBOL_VLDOCU: TFloatField;
+    dstConsultaBoletosBOL_NMSACA: TStringField;
+    dstConsultaBoletosBOL_FLSITU: TStringField;
+    dstConsultaBoletosBOL_VLJURO: TFloatField;
+    dstConsultaBoletosBOL_DTPAGA: TDateField;
+    dstConsultaBoletosBOL_CDCLIE: TStringField;
+    dstConsultaBoletosBOL_DIASAT2: TIntegerField;
+    cdsConsultaBOL_NRDOCU: TStringField;
+    cdsConsultaBOL_NRFATU: TStringField;
+    cdsConsultaBOL_NRCART: TStringField;
+    cdsConsultaBOL_DTVENC: TDateField;
+    cdsConsultaBOL_VLDOCU: TFloatField;
+    cdsConsultaBOL_NMSACA: TStringField;
+    cdsConsultaBOL_FLSITU: TStringField;
+    cdsConsultaBOL_VLJURO: TFloatField;
+    cdsConsultaBOL_DTPAGA: TDateField;
+    cdsConsultaBOL_CDCLIE: TStringField;
+    cdsConsultaBOL_DIASAT2: TIntegerField;
+    dstConsultaBoletosBOL_DTDOCU: TDateField;
+    cdsConsultaBOL_DTDOCU: TDateField;
+    dsqryBoletos: TDataSource;
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormActivate(Sender: TObject);
+    procedure ckb_TodasClick(Sender: TObject);
+    procedure ckb_DatasClick(Sender: TObject);
+    procedure btExecutarClick(Sender: TObject);
+    procedure qryBoletosCalcFields(DataSet: TDataSet);
+    procedure dsBoletosDataChange(Sender: TObject; Field: TField);
+    procedure GridContasCellClick(Column: TColumn);
+    procedure GridContasKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure GridContasKeyPress(Sender: TObject; var Key: Char);
+    procedure rgbOpcaoClick(Sender: TObject);
+  private
+    procedure VENCIDAS;
+    procedure AVENCER;
+    procedure RECEBIDAS;
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  frmConsContasReceber: TfrmConsContasReceber;
+  M_NRCONS, M_LETRAS : String;
+
+implementation
+
+Uses uFuncoes, udmInfoCartao, uInfoPrincipal;
+
+{$R *.dfm}
+
+procedure TfrmConsContasReceber.FormClose(Sender: TObject;
+  var Action: TCloseAction);
+begin
+     dmInfoCartao.cdsClientes.Close;
+     qryBoletos.Close;
+     //
+     uFuncoes.Limpar_Status;
+     //
+     Action := caFree;
+end;
+
+procedure TfrmConsContasReceber.FormActivate(Sender: TObject);
+begin
+     If (dmInfoCartao.cdsClientes.Active = False) Then
+        dmInfoCartao.cdsClientes.Open;
+     //
+     dmInfoCartao.cdsClientes.First;
+end;
+
+procedure TfrmConsContasReceber.ckb_TodasClick(Sender: TObject);
+begin
+     If (ckb_Todas.Checked = True) Then
+     begin
+          lbl_mens1.Enabled  := False;
+          cmbCliente.Enabled := False;
+     End
+     Else
+     begin
+          lbl_mens1.Enabled  := True;
+          cmbCliente.Enabled := True;
+     End;
+end;
+
+procedure TfrmConsContasReceber.ckb_DatasClick(Sender: TObject);
+begin
+     If (ckb_Datas.Checked = True) Then
+     begin
+          edt_DTINIC.Enabled  := True;
+          edt_DTFINA.Enabled  := True;
+          //
+          edt_DTINIC.Date     := Date();
+          edt_DTFINA.Date     := Date();
+          //
+          lbl_e.Enabled       := True;
+     End
+     Else
+     begin
+          edt_DTINIC.Enabled  := False;
+          edt_DTFINA.Enabled  := False;
+          lbl_e.Enabled       := False;
+     End;
+end;
+
+procedure TfrmConsContasReceber.VENCIDAS;
+Var
+   M_CDCLIE:String;
+begin
+     If (ckb_Todas.Checked =  True) Then
+     begin
+          If (ckb_Datas.Checked = True) Then
+          begin
+               with dstConsultaBoletos do
+               begin
+                    DisableControls;
+                    Prepared    := False;
+                    Active      := False;
+                    //
+                    CommandText := 'Select * from ACCBOL WHERE BOL_DTVENC >=:pInicial and BOL_DTVENC<=:pFinal'                                  +'and BOL_FLSITU='+QuotedStr('A')+' and BOL_DTVENC<:pDtatual'
+                                  +'order by BOL_NMSACA';
+                    //
+                    Params.CreateParam(ftDate, 'pInicial', ptInput);
+                    Params.CreateParam(ftDate, 'pFinal', ptInput);
+                    Params.CreateParam(ftDate, 'pDtatual', ptInput);
+                    //
+                    ParamByName('pInicial').AsDateTime := StrToDate(edt_DTINIC.Text);
+                    ParamByName('pFinal').AsDateTime   := StrToDate(edt_DTFINA.Text);
+                    ParamByName('pDtatual').AsDateTime   := Date();
+                    //
+                    Prepared    := True;
+                    Active      := True;
+                    EnableControls;
+               end;
+               //
+               with cdsConsulta do
+               begin
+                    DisableControls;
+                    Active      := False;
+                    Active      := True;
+                    EnableControls;
+               end;
+          End
+          Else
+          begin
+               with dmInfoCartao.dstClientes do
+               begin
+                    DisableControls;
+                    Active      := False;
+                    //
+                    CommandText := 'Select * from ACCBOL Where BOL_FLSITU='+QuotedStr('A')
+                                  +'and BOL_DTVENC<:pDtatual order by BOL_NMSACA';
+                    ParamByName('pDtatual').AsDateTime   := Date();
+                    Active      := True;
+                    EnableControls;
+               end;
+               //
+               with dmInfoCartao.cdsClientes do
+               begin
+                    DisableControls;
+                    Active      := False;
+                    Active      := True;
+                    EnableControls;
+               end;
+          End;
+     End
+     Else
+     begin
+          M_CDCLIE := cdsConsulta.FieldByName('BOL_CDCLIE').AsString;
+          If (ckb_Datas.Checked = True) Then
+          begin
+               with dstConsultaBoletos do
+               begin
+                    DisableControls;
+                    Active      := False;
+                    //
+                    CommandText := 'Select * from ACCBOL WHERE BOL_DTVENC >=:pInicial and BOL_DTVENC<=:pFinal'                                  +'and BOL_FLSITU='+QuotedStr('A')+' And BOL_CDCLIE='+QuotedStr(M_CDCLIE)                                  +'and BOL_DTVENC<:pDtatual order by BOL_NMSACA';
+                    //
+                    ParamByName('pInicial').AsDateTime := StrToDate(edt_DTINIC.Text);
+                    ParamByName('pFinal').AsDateTime   := StrToDate(edt_DTFINA.Text);
+                    ParamByName('pDtatual').AsDateTime   := Date();
+                    //
+                    Active      := True;
+                    EnableControls;
+               end;
+               //
+               with cdsConsulta do
+               begin
+                    DisableControls;
+                    Active      := False;
+                    Active      := True;
+                    EnableControls;
+               end;
+          End
+          Else
+          begin
+               with dstConsultaBoletos do
+               begin
+                    DisableControls;
+                    Active      := False;
+                    //
+                    CommandText := 'Select * from ACCBOL Where BOL_FLSITU='+QuotedStr('A')+                                   'And BOL_CDCLIE='+QuotedStr(M_CDCLIE)
+                                  +'and BOL_DTVENC<:pDtatual order by BOL_NMSACA';
+                    ParamByName('pDtatual').AsDateTime   := Date();
+                    //
+                    Active      := True;
+                    EnableControls;
+               end;
+               //
+               with cdsConsulta do
+               begin
+                    DisableControls;
+                    Active      := False;
+                    Active      := True;
+                    EnableControls;
+               end;
+          End;
+     End;
+end;
+
+procedure TfrmConsContasReceber.AVENCER;
+Var
+   M_CDCLIE : String;
+begin
+     If (ckb_Todas.Checked = True) Then
+     begin
+          If (ckb_Datas.Checked = True) Then
+          begin
+               with qryBoletos do
+               begin
+                    //
+                    DisableControls;
+                    Close;
+                    SQL.Add('Select BOL_NRDOCU, BOL_NRFATU, BOL_NRCART, BOL_DTVENC,BOL_DTDOCU, BOL_VLDOCU, BOL_NMSACA, BOL_FLSITU, BOL_VLJURO,BOL_DTPAGA from ACCBOL');
+                    SQL.Add('WHERE (BOL_DTVENC >=:pInicial) and (BOL_DTVENC<=:pFinal) and (BOL_FLSITU='+QuotedStr('A')+') and (BOL_DTVENC<:pDtatual)');
+                    SQL.Add('order by BOL_NMSACA');
+                    Open;
+                    //
+                    ParamByName('pInicial').AsDateTime := StrToDate(edt_DTINIC.Text);
+                    ParamByName('pFinal').AsDateTime   := StrToDate(edt_DTFINA.Text);
+                    ParamByName('pDtAtua').AsDateTime  := Date();
+                    //
+                    Open;
+                    EnableControls;
+               End
+          End
+          Else
+          begin
+               with qryBoletos do
+               begin
+                    DisableControls;
+                    SQL.Clear;
+                    Close;
+                    SQL.Add('Select * from ACCBOL Where BOL_FLSITU='+QuotedStr('A'));
+                    SQL.Add('and BOL_DTVENC<:pDtatual order by BOL_NMSACA');
+                    //
+                    ParamByName('pDtatual').AsDateTime   := Date();
+                    //
+                    Open;
+                    EnableControls;
+               end;
+          End;
+     End
+     Else
+     begin
+          M_CDCLIE := dmInfoCartao.cdsBoletos.FieldByName('BOL_CDCLIE').AsString;
+          If (ckb_Datas.Checked = True) Then
+          begin
+               with qryBoletos do
+               begin
+                    DisableControls;
+                    Close;
+                    SQL.Add('Select * from ACCBOL WHERE BOL_DTVENC >=:pInicial and BOL_DTVENC<=:pFinal');
+                    SQL.Add('and BOL_FLSITU='+QuotedStr('A')+' And BOL_CDCLIE='+QuotedStr(M_CDCLIE));
+                    SQL.Add('and BOL_DTVENC<:pDtatual order by BOL_NMSACA');
+                    //
+                    ParamByName('pInicial').AsDateTime := StrToDate(edt_DTINIC.Text);
+                    ParamByName('pFinal').AsDateTime   := StrToDate(edt_DTFINA.Text);
+                    ParamByName('pDtAtua').AsDateTime  := Date();
+                    //
+                    Open;
+                    EnableControls;
+                    //
+               end;
+          End
+          Else
+          begin
+               with qryBoletos do
+               begin
+                    DisableControls;
+                    Close;
+                    SQL.Add('Select * from ACCBOL Where BOL_FLSITU='+QuotedStr('A')+' And BOL_CDCLIE='+QuotedStr(M_CDCLIE));
+                    SQL.Add('and BOL_DTVENC<:pDtatual order by BOL_NMSACA');
+                    ParamByName('pDtatual').AsDateTime   := Date();
+                    //
+                    Open;
+                    EnableControls;
+               end;
+               //
+         End;
+     End;
+
+end;
+
+procedure TfrmConsContasReceber.RECEBIDAS;
+Var
+   M_CDCLIE:String;
+begin
+     If (ckb_Todas.Checked =  True) Then
+     begin
+          If (ckb_Datas.Checked = True) Then
+          begin
+               with dstConsultaBoletos do
+               begin
+                    DisableControls;
+                    Active      := False;
+                    //
+                    CommandText := 'Select * from ACCBOL WHERE BOL_DTVENC >=:pInicial and BOL_DTVENC<=:pFinal'                                  +'and BOL_FLSITU='+QuotedStr('P')+' order by BOL_NMSACA';
+                    //
+                    ParamByName('pInicial').AsDateTime := StrToDate(edt_DTINIC.Text);
+                    ParamByName('pFinal').AsDateTime   := StrToDate(edt_DTFINA.Text);
+                    //
+                    Active      := True;
+                    EnableControls;
+               end;
+               //
+               with cdsConsulta do
+               begin
+                    DisableControls;
+                    Active      := False;
+                    Active      := True;
+                    EnableControls;
+               end;
+          End
+          Else
+          begin
+               with dstConsultaBoletos do
+               begin
+                    DisableControls;
+                    Active      := False;
+                    //
+                    CommandText := 'Select * from ACCBOL Where BOL_FLSITU='+QuotedStr('P')
+                                  +'order by BOL_NMSACA';
+                    //
+                    Active      := True;
+                    EnableControls;
+               end;
+               //
+               with cdsConsulta do
+               begin
+                    DisableControls;
+                    Active      := False;
+                    Active      := True;
+                    EnableControls;
+               end;
+          End;
+     End
+     Else
+     begin
+          M_CDCLIE := cdsConsulta.FieldByName('BOL_CDCLIE').AsString;
+          If (ckb_Datas.Checked = True) Then
+          begin
+               with dstConsultaBoletos do
+               begin
+                    DisableControls;
+                    Active      := False;
+                    //
+                    CommandText := 'Select * from ACCBOL WHERE BOL_DTVENC >=:pInicial and BOL_DTVENC<=:pFinal'                                  +' and BOL_FLSITU='+QuotedStr('P')+' And BOL_CDCLIE='+QuotedStr(M_CDCLIE)                                  +' order by BOL_NMSACA';
+                    //
+                    ParamByName('pInicial').AsDateTime := StrToDate(edt_DTINIC.Text);
+                    ParamByName('pFinal').AsDateTime   := StrToDate(edt_DTFINA.Text);
+                    //
+                    Active      := True;
+                    EnableControls;
+               end;
+               //
+               with cdsConsulta do
+               begin
+                    DisableControls;
+                    Active      := False;
+                    Active      := True;
+                    EnableControls;
+               end;
+          End
+          Else
+          begin
+               with dstConsultaBoletos do
+               begin
+                    DisableControls;
+                    Active      := False;
+                    //
+                    CommandText := 'Select * from ACCBOL'
+                                 + 'Where BOL_FLSITU='+QuotedStr('P')+' And BOL_CDCLIE='+QuotedStr(M_CDCLIE)                                 + 'order by BOL_NMSACA';
+                    //
+                    Active      := True;
+                    EnableControls;
+               end;
+               //
+               with cdsConsulta do
+               begin
+                    DisableControls;
+                    Active      := False;
+                    Active      := True;
+                    EnableControls;
+               end;
+          End;
+     End;
+end;
+
+procedure TfrmConsContasReceber.btExecutarClick(Sender: TObject);
+begin
+    //If (M_NRCONS = '1') Then
+    If (rgbOpcao.ItemIndex = 0) Then
+         AVENCER;
+    //If (M_NRCONS = '2') Then
+    If (rgbOpcao.ItemIndex = 1) Then
+         VENCIDAS;
+    //If (M_NRCONS = '3') Then
+    If (rgbOpcao.ItemIndex = 2) Then
+         RECEBIDAS;
+end;
+
+procedure TfrmConsContasReceber.qryBoletosCalcFields(DataSet: TDataSet);
+Var
+     M_DTPAGA : String;
+     W_DTVENC : Tdate;
+begin
+     If (cdsConsultaBOL_DTVENC.AsDateTime<Date())
+        and (cdsConsulta.FieldByName('BOL_FLSITU').AsString = 'A') Then
+          cdsConsultaBOL_DIASAT2.Value := StrtoInt(FloattoStr(Date()-cdsConsultaBOL_DTVENC.AsDateTime));
+     //
+     If (cdsConsultaBOL_DTVENC.AsDateTime>Date())
+        and (cdsConsulta.FieldByName('BOL_FLSITU').AsString = 'A') Then
+          cdsConsultaBOL_DIASAT2.Value := StrtoInt(FloattoStr(Date()-cdsConsultaBOL_DTVENC.AsDateTime));
+     //
+     If (cdsConsulta.FieldByName('BOL_FLSITU').AsString = 'P') Then
+     begin
+          M_DTPAGA := cdsConsulta.FieldByName('BOL_DTPAGA').AsString;
+          W_DTVENC := cdsConsulta.FieldByName('BOL_DTVENC').AsDateTime;
+          // 20050115          15/01/2004
+          M_DTPAGA := Copy(M_DTPAGA,7,2)+'/'+Copy(M_DTPAGA,5,2)+'/'+Copy(M_DTPAGA,1,4);
+          //
+          If (M_DTPAGA <> '//') Then
+             cdsConsultaBOL_DIASAT2.Value := StrtoInt(FloattoStr(StrtoDate(M_DTPAGA)-W_DTVENC));
+     End;
+end;
+
+procedure TfrmConsContasReceber.dsBoletosDataChange(Sender: TObject;
+  Field: TField);
+begin
+     frmPrincipal.StatusBar1.Panels[2].Text := ' Registro: ' + IntToStr(dsBoletos.DataSet.RecNo) +
+                          ' de ' + IntToStr(dsBoletos.DataSet.RecordCount);
+end;
+
+procedure TfrmConsContasReceber.GridContasCellClick(Column: TColumn);
+begin
+     M_LETRAS := ' ';
+end;
+
+procedure TfrmConsContasReceber.GridContasKeyDown(Sender: TObject;
+  var Key: Word; Shift: TShiftState);
+begin
+     //Impedir que apagar o registro atual.
+     If (Shift = [ssCtrl]) and (Key = 46) Then
+         KEY := 0;
+     //
+     IF (KEY=38) or (key=40) then // avalio se é seta para cima ou para baixo;
+        M_LETRAS := ' ';
+end;
+
+procedure TfrmConsContasReceber.GridContasKeyPress(Sender: TObject;
+  var Key: Char);
+begin
+     M_LETRAS := M_LETRAS+uppercase(key); // acumula as letras digitadas     qryBoletos.LOCATE('BOL_NMSACA',M_LETRAS,[loPartialKey]); // Efetua a procura
+end;
+
+procedure TfrmConsContasReceber.rgbOpcaoClick(Sender: TObject);
+begin
+    If (rgbOpcao.ItemIndex = 0) Then
+         lbl_Titulo.Caption := 'A vencer';
+    If (rgbOpcao.ItemIndex = 1) Then
+         lbl_Titulo.Caption := 'Vencidas';
+    If (rgbOpcao.ItemIndex = 2) Then
+         lbl_Titulo.Caption := 'Recebidas';
+end;
+
+end.
